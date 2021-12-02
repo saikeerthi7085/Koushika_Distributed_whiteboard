@@ -1,0 +1,621 @@
+﻿<!doctype html>
+<html lang="en">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css" integrity="sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4"
+          crossorigin="anonymous">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.1.0/css/all.css" integrity="sha384-lKuwvrZot6UHsBSfcMvOkWwlCMgc0TaWr+30HWe3a4ltaBwTZhyTEggF5tJv8tbt"
+          crossorigin="anonymous">
+    <title>Distrubuted Whiteboard</title>
+    <style>
+        .navbar-brand {
+            padding: 0;
+            margin: 0 10px 0 0;
+        }
+
+        .nav-logo-img {
+            width: 50px;
+        }
+
+        .disconnected {
+            -webkit-filter: grayscale(100%); /* Safari 6.0 - 9.0 */
+            filter: grayscale(100%);
+        }
+        canvas {
+            background-color: lightgoldenrodyellow;
+            position: absolute;
+            width: 800px;
+            height: 600px;
+            top: 40px;
+            left: 10px;
+        }
+        html {
+            height: 100%;
+        }
+
+        body {
+            height: calc(100% - 120px);
+        }
+        #nav {
+            width: 100%;
+            display: inline-block;
+            text-align: center;
+            padding: 0;
+            list-style: none;
+            background-color: #f2f2f2;
+            border-bottom: 1px solid #ccc;
+            border-top: 1px solid #ccc;
+            margin-left: 0px;
+            // looks like bootstrap is putting a left margin on your #nav you may want it off.
+        }
+
+            #nav li {
+                display: inline-block;
+                text-align: center;
+            }
+        #whiteboard {
+           
+            display: block;
+            margin-top: 66px;
+            background-color: lightgoldenrodyellow;
+            position: absolute;
+            width: 800px;
+            height: 500px;
+            top: 5px;
+            left: 220px;
+            right:100px;
+        }
+
+        svg {
+            display: block;
+        }
+
+        .toolbox {
+            width: 7rem;
+            height: 1.5rem;
+            display: inline-block;
+            vertical-align: middle;
+            border-radius: 0.3rem;
+            border: 1px solid black;
+        }
+
+        .selected {
+            width: 4rem;
+            border: 1px solid white;
+        }
+
+        .penbox {
+            background-color: white;
+        }
+
+        .message-log {
+            margin-bottom: 50px;
+            pointer-events: none;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px white;
+        }
+
+        .top-btn-group {
+            margin-right: 10px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .popover-body {
+            width: 240px;
+            height: 240px;
+        }
+        .footer-copyright {
+            width: 100%;
+            max-width: 100%;
+            text-align: center;
+        }   
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <header>
+            <div>
+                <h5 class="text-center mt-3">Distributed WhiteBoard</h5>
+                <button type="button" v-on:click="diagram.clear" id="Close" style="float:right">
+                    Clear
+                </button>
+            </div>
+
+            <div style="text-align:center">
+
+            </div>
+            <form id="uploadForm" method="post" enctype="multipart/form-data">
+                <input id="file-selector" v-on:change="upload" type="file" name="file" hidden>
+            </form>
+        </header>
+        <div id="message-log" class="fixed-bottom message-log collapse show" style="float:left">
+            <p class="m-2">
+                <ul id="messagesList">
+                </ul>
+            </p>
+        </div>
+        
+        
+        <div class="modal fade" id="inputName" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">Enter your Name</h5>
+                    </div>
+                    <div class="modal-body">
+                        <input id="username" class="form-control" type="text" placeholder="Your name" v-model="name" v-on:keypress.enter="setName">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" v-bind:disabled="!name" data-dismiss="modal" v-on:click="setName">OK</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <div id="whiteboard" width="100%" hight="100%">
+        
+    </div>
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+            crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.0/umd/popper.min.js" integrity="sha384-cs/chFZiN24E4KMATLdqdvsezGxaGsi4hLGOzlXwp5UZB1LY//20VyM2taTB4QvJ"
+            crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/js/bootstrap.min.js" integrity="sha384-uefMccjFJAIv6A+rW+L4AHf99KvxDjWSu1z9VI8SKNVmz4sk7buKt/6v9KI65qnm"
+            crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@aspnet/signalr@1.0.0/dist/browser/signalr.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/svg.js/2.6.5/svg.min.js"></script>
+    <script>
+        function connect(url, connected, disconnected) {
+            var connectWithRetry = c => c.start().then(() => connected(c)).catch(error => {
+                console.log('Failed to start SignalR connection: ' + error.message);
+                setTimeout(() => connectWithRetry(c), 5000);
+            });
+
+            // create connection
+            var c = new signalR.HubConnectionBuilder().withUrl(url).build();
+
+
+            // auto reconnect when connection is closed
+            c.onclose(() => {
+                disconnected(c);
+                console.log("name" + this.name);
+                console.log('Disconnected, try to reconnect.');
+                connectWithRetry(c);
+            });
+
+            connectWithRetry(c);
+            return c;
+        }
+
+
+        var Diagram = function (element, tools) {
+            var id;
+            var shapes = {};
+            var past = [], future = [];
+            var timestamp = 0;
+            var buffer = [];
+            var background;
+            var scale = 1;
+            var offset = [0, 0];
+
+            var shapeUpdateCallback = shapePatchCallback = shapeRemoveCallback = clearCallback = historyChangeCallback = () => { };
+
+            function generateId() {
+                return Math.floor((1 + Math.random()) * 0x100000000).toString(16).substring(1);
+            }
+
+            function tryNotify(c) {
+                var t = new Date().getTime();
+                if (t - timestamp < 250) return;
+                c();
+                timestamp = t;
+            }
+
+
+            function historyChange() {
+                historyChangeCallback(past.length > 0, future.length > 0);
+            }
+
+            function applyStyle(e, c, w) {
+                return e.fill('none').stroke({ color: c, width: w, linecap: 'round' });
+            }
+
+            function translate(x, y) {
+                return [offset[0] + x / scale, offset[1] + y / scale];
+            }
+
+            function startShape(k, c, w, x, y) {
+                if (id) return;
+                id = generateId();
+                [x, y] = translate(x, y);
+                var m = { kind: k, color: c, width: w, data: tools[k].start(x, y) };
+                shapes[id] = { view: applyStyle(tools[k].draw(element, m.data), c, w), model: m };
+                future = [];
+                past.push(id);
+                historyChange();
+                shapeUpdateCallback(id, m);
+            }
+
+            function drawShape(x, y) {
+                if (!id) return;
+                [x, y] = translate(x, y);
+                var s = shapes[id];
+                var t = tools[s.model.kind];
+                var d = t.move(x, y, s.model.data);
+                t.update(s.view, s.model.data);
+                if (d) {
+                    buffer = buffer.concat(d);
+                    tryNotify(() => {
+                        shapePatchCallback(id, buffer);
+                        buffer = [];
+                    });
+                } else tryNotify(() => shapeUpdateCallback(id, s.model));
+            }
+
+            function endShape() {
+                if (!id) return;
+                if (buffer.length > 0) {
+                    shapePatchCallback(id, buffer);
+                    buffer = [];
+                } else shapeUpdateCallback(id, shapes[id].model);
+                id = null;
+            }
+
+            function updateShape(i, m) {
+                if (shapes[i]) tools[m.kind].update(shapes[i].view, shapes[i].model.data = m.data);
+                else shapes[i] = { view: applyStyle(tools[m.kind].draw(element, m.data), m.color, m.width), model: m };
+            }
+
+            function patchShape(i, d) {
+                if (shapes[i]) tools[shapes[i].model.kind].update(shapes[i].view, shapes[i].model.data = shapes[i].model.data.concat(d));
+            }
+
+            function removeShape(i) {
+                if (!shapes[i]) return;
+                shapes[i].view.remove();
+                delete shapes[i];
+            }
+
+            function clear() {
+                removeAll();
+                clearCallback();
+            }
+
+
+            function removeAll() {
+                id = null;
+                shapes = {};
+                past = [], future = [];
+                timestamp = 0;
+                buffer = [];
+                background = null;
+                element.clear();
+                historyChange();
+            }
+
+
+
+
+
+            function undo() {
+                var i = past.pop();
+                if (!i) return;
+                future.push(shapes[i].model);
+                removeShape(i);
+                shapeRemoveCallback(i);
+                historyChange();
+            }
+
+            function redo() {
+                var m = future.pop();
+                if (!m) return;
+                var i = generateId();
+                updateShape(i, m);
+                shapeUpdateCallback(i, m);
+                past.push(i);
+                historyChange();
+            }
+
+            return {
+                startShape: startShape,
+                drawShape: drawShape,
+                endShape: endShape,
+                updateShape: updateShape,
+                patchShape: patchShape,
+                removeShape: removeShape,
+                clear: clear,
+                removeAll: removeAll,
+
+                undo: undo,
+                redo: redo,
+                onShapeUpdate: c => shapeUpdateCallback = c,
+                onShapeRemove: c => shapeRemoveCallback = c,
+                onShapePatch: c => shapePatchCallback = c,
+                onClear: c => clearCallback = c,
+                onHistoryChange: c => historyChangeCallback = c
+            };
+        };
+
+        var modes = {
+            panAndZoom: {
+                startOne: p => 0,
+                moveOne: (p, pp) => diagram.pan(pp[0] - p[0], pp[1] - p[1]),
+                startTwo: (p1, p2) => 0,
+                moveTwo: (p1, p2, pp1, pp2) => {
+                    var r = Math.sqrt(((p2[0] - p1[0]) * (p2[0] - p1[0]) + (p2[1] - p1[1]) * (p2[1] - p1[1]))
+                        / ((pp2[0] - pp1[0]) * (pp2[0] - pp1[0]) + (pp2[1] - pp1[1]) * (pp2[1] - pp1[1])));
+                    diagram.pan(pp1[0] - p1[0] / r, pp1[1] - p1[1] / r);
+                    diagram.zoom(r);
+                },
+                end: () => 0
+            },
+            draw: {
+                startOne: p => { if (appData.connected) diagram.startShape(appData.tool, appData.color, appData.width, p[0], p[1]); },
+                moveOne: (p, pp) => { if (appData.connected) diagram.drawShape(p[0], p[1]); },
+                startTwo: () => 0,
+                moveTwo: () => 0,
+                end: () => { if (appData.connected) diagram.endShape(); }
+            }
+        };
+
+        var tools = {
+            polyline: {
+                start: (x, y) => [x, y],
+                move: (x, y, d) => { d.push(x, y); return [x, y]; },
+                draw: (b, d) => b.polyline(d),
+                update: (e, d) => e.plot(d)
+            },
+            line: {
+                start: (x, y) => [x, y, x, y],
+                move: (x, y, d) => { d[2] = x; d[3] = y; },
+                draw: (b, d) => b.line(d),
+                update: (e, d) => e.plot(d)
+            },
+            rect: {
+                start: (x, y) => [x, y, x, y],
+                move: (x, y, d) => { d[2] = x; d[3] = y; },
+                draw: (b, d) => b.rect(Math.abs(d[2] - d[0]), Math.abs(d[3] - d[1])).move(Math.min(d[0], d[2]), Math.min(d[1], d[3])),
+                update: (e, d) => e.x(Math.min(d[2], d[0])).y(Math.min(d[1], d[3])).size(Math.abs(d[2] - d[0]), Math.abs(d[3] - d[1]))
+            },
+            circle: {
+                start: (x, y) => [x, y, 0],
+                move: (x, y, d) => { d[2] = Math.floor(Math.sqrt((d[0] - x) * (d[0] - x) + (d[1] - y) * (d[1] - y))) },
+                draw: (b, d) => b.circle(d[2] * 2).cx(d[0]).cy(d[1]),
+                update: (e, d) => e.cx(d[0]).cy(d[1]).radius(d[2])
+            },
+            ellipse: {
+                start: (x, y) => [x, y, x, y],
+                move: (x, y, d) => { d[2] = x; d[3] = y; },
+                draw: (b, d) => b.ellipse(Math.abs(d[2] - d[0]), Math.abs(d[3] - d[1])).cx((d[0] + d[2]) / 2).cy((d[1] + d[3]) / 2),
+                update: (e, d) => e.cx((d[0] + d[2]) / 2).cy((d[1] + d[3]) / 2).radius(Math.abs(d[2] - d[0]) / 2, Math.abs(d[3] - d[1]) / 2)
+            }
+        };
+
+        var connection = connect('/draw', () => {
+            appData.connected = true;
+            diagram.removeAll();
+        }, () => appData.connected = true);
+        var diagram = new Diagram(SVG('whiteboard'), tools);
+
+        diagram.onShapeUpdate((i, m) => connection.send('updateShape', i, m));
+
+        diagram.onShapeRemove(i => connection.send('removeShape', i));
+        diagram.onShapePatch((i, d) => connection.send('patchShape', i, d));
+
+
+        diagram.onClear(() => connection.send('clear'));
+        diagram.onHistoryChange((p, f) => [appData.hasUndo, appData.hasRedo] = [p, f]);
+        connection.on('clear', diagram.removeAll);
+
+        connection.on('shapeUpdated', diagram.updateShape);
+
+        connection.on('shapePatched', diagram.patchShape);
+        connection.on('shapeRemoved', diagram.removeShape);
+        connection.on('backgroundUpdated', i => diagram.updateBackground('/background/' + i));
+        connection.on('newMessage', (n, m) => appData.messages.push({ name: n, message: m }));
+        connection.on('userUpdated', n => appData.totalUsers = n);
+        connection.on('CheckLeaderRights', function () {
+
+            document.getElementById("CreateNew").disabled = false;
+            document.getElementById("Close").disabled = false;
+        });
+        connection.on('CreateNewBoard', function (UserNamesList) {
+            var yescount = 0, Nocount;
+            if (confirm("please confirm ,Leader wants to create new board ") == true) {
+                yescount += 1;
+
+            }
+            else {
+                Nocount += 1;
+            }
+
+
+            if (yescount >= Math.floor(Object.keys(UserNamesList).length / 2)) {
+                connection.send("Savedata")
+            }
+            else {
+                alert("more than half users denied creating new, please continue")
+            }
+
+        });
+
+      
+        connection.on('UpdatedUserList', function (UserNamesList) {
+            $('#messagesList').empty();
+            console.log("Entered");
+
+            $.each(UserNamesList, function (i, s) {
+
+               
+                    var ol = document.createElement("ol");
+                    ol.style.color = "black";
+                    ol.textContent = UserNamesList[i];
+                    document.getElementById("messagesList").appendChild(ol);
+              
+            })
+           
+
+        });
+
+
+
+        var appData = {
+            connected: false,
+            totalUsers: 1,
+            hasUndo: false,
+            hasRedo: false,
+            tool: 'polyline',
+            color: 'black',
+            width: 1,
+            tools: Object.keys(tools),
+            colors: ['black', 'grey', 'darkred', 'red', 'orange', 'yellow', 'green', 'deepskyblue', 'indigo', 'purple'],
+            widths: [1, 2, 4, 8],
+            messages: [],
+            messageColor: 'black',
+            name: '',
+            draft: '',
+            showLog: true,
+            maxImageSize: 1920
+        };
+
+        var app = new Vue({
+            el: '#app',
+            data: appData,
+            methods: {
+                upload: function () {
+                    resizeImage(event.target.files[0], this.maxImageSize, b => {
+                        var formData = new FormData($('#uploadForm')[0]);
+                        if (b) {
+                            formData.delete('file');
+                            formData.append('file', b);
+                        }
+                        $.ajax({
+                            type: 'POST',
+                            url: '/background/upload',
+                            processData: false,
+                            contentType: false,
+                            cache: false,
+                            data: formData,
+                            success: () => $('#uploadForm')[0].reset()
+                        });
+                    });
+                },
+                zoomIn: () => diagram.zoom(1.25),
+                zoomOut: () => diagram.zoom(0.8),
+                sendMessage: function () {
+                    if (!this.draft) return;
+                    this.messages.push({ name: this.name, message: this.draft });
+                    connection.send('sendMessage', this.name, this.draft);
+                    this.draft = '';
+                },
+                setName: function () {
+                    if (this.name) $('#inputName').modal('toggle');
+                    connection.send('AddUSerDetails', this.name);
+                },
+                CreateNew: function () {
+                    connection.send('CreateNew');
+                },
+
+                toggleLog: function () { this.showLog = !this.showLog; },
+                showSettings: () => $("#settings").modal({ backdrop: 'static', keyboard: false })
+            }
+        });
+
+        // UI initialization
+        (function () {
+            // hook mouse and touch events for whiteboard
+            var mode;
+            var prev;
+            var started;
+            var start = p => {
+                if (!mode) return;
+                prev = p;
+            };
+            var move = p => {
+                if (!mode) return;
+                if (prev.length !== p.length) return;
+                // do not start if the move is too small
+                if (!started && p.length === 1 && Math.abs(p[0][0] - prev[0][0]) < 5 && Math.abs(p[0][1] - prev[0][1]) < 5) return;
+                else {
+                    started = true;
+                    if (p.length === 1) modes[mode].startOne(prev[0]);
+                    else if (p.length === 2) modes[mode].startTwo(prev[0], prev[1]);
+                }
+                if (p.length === 1) modes[mode].moveOne(p[0], prev[0]);
+                else if (p.length === 2) modes[mode].moveTwo(p[0], p[1], prev[0], prev[1]);
+                prev = p;
+            };
+            var end = p => {
+                if (!mode) return;
+                if (started) modes[mode].end();
+                prev = started = null;
+            };
+            var map = (ts, f) => {
+                var ps = [];
+                for (var i = 0; i < ts.length; i++) ps.push(f(ts[i]));
+                return ps;
+            };
+
+            $('#whiteboard')
+                .on('mousedown', e => {
+                    mode = e.ctrlKey ? 'panAndZoom' : 'draw';
+                    start([[e.offsetX, e.offsetY]]);
+                }).on('mousemove', e => {
+                    move([[e.offsetX, e.offsetY]]);
+                }).on('mouseup', e => {
+                    end();
+                    mode = null;
+                }).on('touchstart', e => {
+                    if (e.touches.length > 2) return;
+                    if (prev) end();
+                    mode = e.touches.length === 1 ? 'draw' : 'panAndZoom';
+                    start(map(e.touches, t => [t.pageX, t.pageY - 66]));
+                    e.preventDefault();
+                }).on('touchmove', e => {
+                    move(map(e.touches, t => [t.pageX, t.pageY - 66]));
+                    e.preventDefault();
+                }).on('touchend', e => {
+                    end();
+                    mode = null;
+                    e.preventDefault();
+                }).on('touchcancel', e => {
+                    end();
+                    mode = null;
+                    e.preventDefault();
+                });
+
+            // disable keyboard events for username dialog
+            $("#inputName").on('shown.bs.modal', () => {
+                $('#username').focus();
+            }).modal({
+                backdrop: 'static',
+                keyboard: false
+            });
+
+            // update zoom level for small devices
+            var w = window.innerWidth;
+            diagram.zoom(w < 576 ? 1 / 3 :
+                w < 768 ? 1 / 2 :
+                    w < 992 ? 2 / 3 :
+                        w < 1200 ? 5 / 6 :
+                            1);
+
+            // hook window resize event to set correct viewbox size
+            window.onresize = () => diagram.resizeViewbox($('#whiteboard').width(), $('#whiteboard').height());
+        })();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,24 @@
+
+{
+    "region" : "us-east-2",
+    "profile" : "Anjum",
+    "configuration" : "Release",
+    "image-tag"     : "Distributedwhiteboard:latest",
+    "docker-build-working-dir" : "",
+    "cluster"                  : "Cluster1",
+    "launch-type"              : "EC2",
+    "task-definition-name"     : "DistributedWhiteboard-task",
+    "task-definition-network-mode" : "bridge",
+    "container-name"               : "DistributedWhiteboard-container",
+    "container-memory-hard-limit"  : 100,
+    "container-memory-soft-limit"  : 100,
+    "container-port-mapping"       : "80:80",
+    "container-environment-variables" : "\"ASPNETCORE_ENVIRONMENT\"=\"Production\"",
+    "skip-image-push"                 : false,
+    "cluster-service"                 : "DistributedWhiteboard-service",
+    "desired-count"                   : 1,
+    "deployment-minimum-healthy-percent" : 50,
+    "deployment-maximum-percent"         : 200,
+    "placement-strategy"                 : "spread=attribute:ecs.availability-zone,spread=instanceId",
+    "vstoolkit-deployment-mode"          : "DeployService"
+}
